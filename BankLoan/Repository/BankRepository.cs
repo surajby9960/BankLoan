@@ -108,6 +108,22 @@ namespace BankLoan.Repository
             }
         }
 
+        public async Task<int> LoanApproval(LoanApproval loanApproval)
+        {
+            var qry = "insert into loanApproval(loanId,BankId,custId,loanStatus)values" +
+                     "(@loanId,@BankId,@custId,@loanStatus)";
+            using(var con=context.CreateConnection())
+            {
+                var tblbank =await con.QuerySingleAsync<LoanApproval>("select bankId from tblCustomer where custId=@custId", new {loanApproval.custId});
+                loanApproval.bankId = tblbank.bankId;
+                loanApproval.loanstatus = "Pending";
+                var lapprove=await con.ExecuteAsync(qry,loanApproval);
+                return lapprove;
+
+            }
+            
+        }
+
         public async Task<int> UpdateBank(Bank bank)
         {
             var qry = "Update tblBank set bankName=@bankName,bankAddress=@bankAddress,bankMobile=@bankMobile where bankid=@bankid";
