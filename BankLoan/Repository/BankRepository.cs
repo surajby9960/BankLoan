@@ -108,6 +108,46 @@ namespace BankLoan.Repository
             }
         }
 
+        public async Task<List<Combine>> GetCustomerLoanById(int? id)
+        {
+            List<Combine> Linf = new List<Combine>();
+            var qry = @"select bankname,c.custname,c.custmobile from tblCustomer c
+                        inner join tblBank b on c.BankId = b.bankId
+                        inner join loanApproval la on c.custId = la.custId";
+            using (var con = context.CreateConnection())
+            {
+                var ltype = new Combine();
+
+                if (id == null)
+                {
+                    var loaninfo = await con.QueryAsync<Combine>(qry);
+                  
+                    foreach (var item in loaninfo)
+                    {
+                        ltype = await con.QuerySingleAsync<Combine>(@"select loantype from tblLoans where loanId=(select loanId from
+                        loanApproval where custId=@id)", new { id=ltype.custId });
+                        item.loanType = ltype.loanType;
+                    }
+                    return loaninfo.ToList();
+                }
+                else
+                {
+                    var qry1 = @"select bankname,c.custname,c.custmobile from tblCustomer c
+                        inner join tblBank b on c.BankId = b.bankId
+                        inner join loanApproval la on c.custId = la.custId where c.custId=@id";
+                    var loaninfo = await con.QuerySingleAsync<Combine>(qry1, new { id });
+
+                    ltype = await con.QuerySingleAsync<Combine>(@"select loantype from tblLoans where loanId=(select loanId from
+                        loanApproval where custId=@id)", new { id });
+                    loaninfo.loanType = ltype.loanType;
+                    Linf.Add(loaninfo);
+                    return Linf;
+
+                }
+               
+            }
+        }
+
         public async Task<int> LoanApproval(LoanApproval loanApproval)
         {
             var qry = "insert into loanApproval(loanId,BankId,custId,loanStatus)values" +
