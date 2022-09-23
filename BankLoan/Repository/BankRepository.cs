@@ -15,6 +15,18 @@ namespace BankLoan.Repository
             
         }
 
+        public async Task<int> AccountOpen(Customer customer)
+        {
+            var qry= @"insert into tblCustomer(custName,accountType,custAddress,custMobile,custEmail,bankId,isDeleted)values
+                            (@custName,@accountType,@custAddress,@custMobile,@custEmail,@bankId,0)";
+
+            using(var con=context.CreateConnection())
+            {
+                var res = await con.ExecuteAsync(qry, customer);
+                return res;
+            }
+        }
+
         public async Task<int> AddCustomer(List<Customer> customer, int id)
         {
             if (customer.Count() > 0)
@@ -108,38 +120,41 @@ namespace BankLoan.Repository
             }
         }
 
-        public async Task<List<Combine>> GetCustomerLoanById(int? id)
+        public async Task<List<Combine>> GetCustomerLoanById(int? custid,int? bankid)
         {
             List<Combine> Linf = new List<Combine>();
-            var qry = @"select bankname,c.custname,c.custmobile from tblCustomer c
+            var qry = @"select bankname,c.custname,c.custmobile,l.loanType from tblCustomer c 
+                                inner join tblBank b on c.BankId=b.bankId
+                                inner join loanApproval la on c.custId=la.custId 
+                                inner join tblLoans l on la.loanId=l.loanId";
+
+            var qry1 = @"select bankname,c.custname,c.custId,c.custmobile from tblCustomer c
                         inner join tblBank b on c.BankId = b.bankId
-                        inner join loanApproval la on c.custId = la.custId";
+                        inner join loanApproval la on c.custId = la.custId where c.custId=@custid and b.bankId=@bankid";
+
+            var qry2 = @"select bankname,c.custname,c.custmobile,l.loanType from tblCustomer c 
+                                inner join tblBank b on c.BankId=b.bankId
+                                inner join loanApproval la on c.custId=la.custId 
+                                inner join tblLoans l on la.loanId=l.loanId where b.bankId=@bankid";
+
             using (var con = context.CreateConnection())
             {
                 var ltype = new Combine();
 
-                if (id == null)
+                if (custid == 0&& bankid==0)
                 {
                     var loaninfo = await con.QueryAsync<Combine>(qry);
                   
-                    foreach (var item in loaninfo)
-                    {
-                        ltype = await con.QuerySingleAsync<Combine>(@"select loantype from tblLoans where loanId=(select loanId from
-                        loanApproval where custId=@id)", new { id=ltype.custId });
-                        item.loanType = ltype.loanType;
-                    }
                     return loaninfo.ToList();
+                }
+                else if(custid==0)
+                {
+                    var loaninfo = await con.QueryAsync<Combine>(qry2, new {bankid});
+                        return loaninfo.ToList();
                 }
                 else
                 {
-                    var qry1 = @"select bankname,c.custname,c.custmobile from tblCustomer c
-                        inner join tblBank b on c.BankId = b.bankId
-                        inner join loanApproval la on c.custId = la.custId where c.custId=@id";
-                    var loaninfo = await con.QuerySingleAsync<Combine>(qry1, new { id });
-
-                    ltype = await con.QuerySingleAsync<Combine>(@"select loantype from tblLoans where loanId=(select loanId from
-                        loanApproval where custId=@id)", new { id });
-                    loaninfo.loanType = ltype.loanType;
+                     var loaninfo = await con.QuerySingleAsync<Combine>(qry1, new { custid,bankid });
                     Linf.Add(loaninfo);
                     return Linf;
 

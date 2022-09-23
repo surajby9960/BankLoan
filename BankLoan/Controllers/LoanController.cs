@@ -30,11 +30,11 @@ namespace BankLoan.Controllers
             }
         }
         [HttpGet("custid")]
-        public async Task<IActionResult> GetCustomerLoanInfo(int id)
+        public async Task<IActionResult> GetCustomerLoanInfo(int custid,int bankid)
         {
             try
             {
-                var loaninfo = await customerRepository.GetCustomerLoanById(id);
+                var loaninfo = await customerRepository.GetCustomerLoanById(custid, bankid);
                 return Ok(loaninfo);
             }catch(Exception ex)
             {

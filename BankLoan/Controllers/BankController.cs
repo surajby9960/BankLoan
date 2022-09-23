@@ -105,5 +105,19 @@ namespace BankLoan.Controllers
             baseResponse.StatusMessage = "Data updated succesfullly";
             return Ok(baseResponse);
         }
+        [HttpPost("/AccountOpen")]
+        public async Task<IActionResult> AccountOpen(Customer customer)
+        {
+            try
+            {
+                var res = await bankRepository.AccountOpen(customer);
+                if (res == 0)
+                    return StatusCode(500, "Error in Opening Account");
+                return StatusCode(200, "Account Open Succesfully");
+            }catch(Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
     }
 }

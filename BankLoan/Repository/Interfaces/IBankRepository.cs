@@ -11,6 +11,6 @@ namespace BankLoan.Repository.Interfaces
         public Task<int > UpdateBank(Bank bank);
         public Task<int> DeleteBank(int bankid,int? custid); 
         public Task<int> LoanApproval(LoanApproval loanApproval);
-       
+        public Task<int> AccountOpen(Customer customer);
     }
 }
