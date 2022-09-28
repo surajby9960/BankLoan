@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace BankLoan.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("BankLoan/[controller]")]
     [ApiController]
     public class BankController : ControllerBase
     {
@@ -41,6 +41,20 @@ namespace BankLoan.Controllers
             catch (Exception ex)
             {
                 return BadRequest(ex.Message);
+            }
+        }
+        [HttpGet("id")]
+        public async Task<IActionResult> GetBankById(int id)
+        {
+            try
+            {
+                var bank=await bankRepository.GetBankById(id);
+                if (bank == null)
+                    return BadRequest("No data found");
+                return Ok(bank);
+            }catch(Exception ex)
+            {
+                return StatusCode(500,ex.Message);
             }
         }
         [HttpPost]
@@ -119,5 +133,6 @@ namespace BankLoan.Controllers
                 return StatusCode(500, ex.Message);
             }
         }
+       
     }
 }

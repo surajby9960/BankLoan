@@ -17,8 +17,8 @@ namespace BankLoan.Repository
 
         public async Task<int> AccountOpen(Customer customer)
         {
-            var qry= @"insert into tblCustomer(custName,accountType,custAddress,custMobile,custEmail,bankId,isDeleted)values
-                            (@custName,@accountType,@custAddress,@custMobile,@custEmail,@bankId,0)";
+            var qry= @"insert into tblCustomer(custName,accountType,custAddress,custMobile,custEmail,bankId,balance,isDeleted)values
+                            (@custName,@accountType,@custAddress,@custMobile,@custEmail,@bankId,@balance,0)";
 
             using(var con=context.CreateConnection())
             {
@@ -102,6 +102,61 @@ namespace BankLoan.Repository
             }
         }
 
+        public async Task<BaseResponse> GetAllByPagination(int pageno, int pageSize)
+        {
+            BaseResponse baseResponse=new BaseResponse();
+            PaginationModel paginationModel = new PaginationModel();
+            List<Customer> customerList= new List<Customer>();
+            if (pageno == 0)
+            {
+                pageno = 1;
+            }
+            if (pageSize == 0)
+            {
+                pageSize = 10;
+            }
+            var val = (pageno - 1) * pageSize;
+            var qry = @"select bankname,c.custname,c.custmobile,l.loanType from tblCustomer c 
+                                inner join tblBank b on c.BankId=b.bankId
+                                inner join loanApproval la on c.custId=la.custId 
+                                inner join tblLoans l on la.loanId=l.loanId order by c.custid
+                                 offset @val  rows fetch next @pageSize rows only;
+                         select @pageno as PageNumber,count(distinct c.custid) as totalpages from tblCustomer c ";
+            using (var con = context.CreateConnection())
+            {
+
+
+                var values = new { pageno = pageno, pagesize = pageSize, val = val };
+                var result = await con.QueryMultipleAsync(qry, values);
+                var list = await result.ReadAsync<Customer>();
+                customerList = list.ToList();
+
+                var pagination = await result.ReadAsync<PaginationModel>();
+                paginationModel = pagination.FirstOrDefault();
+
+                int pagecount = 0;
+                int last = 0;
+                int cnt = 0;
+
+                cnt = paginationModel.totalpages;
+                last = paginationModel.totalpages % pageSize;
+                pagecount = paginationModel.totalpages / pageSize;
+                paginationModel.pageno = pageno;
+
+                if (last > 0)
+                {
+                    paginationModel.totalpages = pagecount + 1;
+                }
+
+                baseResponse.ResponseData1 = customerList;
+                baseResponse.ResponseData2 = pagination;
+            }
+            return baseResponse;
+
+
+
+        }
+
         public async Task<Bank> GetBankById(int id)
         { 
           
@@ -177,6 +232,62 @@ namespace BankLoan.Repository
 
             }
             
+        }
+
+        public async Task<int> PayLoan(int custid, int loanid, int bankid)
+        {
+            Loans loans = new Loans();
+            var qry = @"Update loanapproval set loanstatus='Paid' 
+                        where custId=@custId AND loanid=@loanid AND bankid=@bankid ;
+                        select l.loanamount 
+                        from tblLoans l join loanApproval la 
+                        on l.loanId=la.loanId where bankid=@bankid
+                        and custId=@custId and l.loanId=@loanid ";
+
+            using (var con = context.CreateConnection())
+            {
+                var val = new { custId = custid, loanid = loanid, bankid = bankid };
+                var res = await con.QueryMultipleAsync(qry, val);
+
+                var amount = await res.ReadSingleAsync<double>();
+                //var amnt = await res.ReadAsync<LoanApproval>();
+                
+
+             var r  =await Transcation(custid, amount, "wit");
+
+                return 1;
+            }
+        }
+
+        public async Task<int> Transcation(int id,double amount, string TranscType)
+        {
+            var qry = "update tblcustomer set balance=@balance where custId=@custid";
+            using (var con = context.CreateConnection())
+            {
+                var ress = await con.QuerySingleAsync<Customer>("select balance from tblCustomer where custId=@custid", new { custId=id});
+                 var bal = ress.balance;
+                if (TranscType == "deposite")
+                {
+                    bal += amount;
+                    var res = await con.ExecuteAsync(qry, new { custid = id, balance = bal });
+                    return 1;
+
+                }
+                else
+                {
+                    if (bal > amount)
+                    {
+                        bal-= amount;
+                        var res = await con.ExecuteAsync(qry, new { custid = id, balance = bal });
+                        return 0;
+                    }
+                    else
+                    {
+                        return 2;
+                    }
+                }
+            }
+           
         }
 
         public async Task<int> UpdateBank(Bank bank)

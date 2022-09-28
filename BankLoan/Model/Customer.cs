@@ -8,6 +8,7 @@
         public string? custAddress { get; set; }
         public string? custMobile { get; set; }
         public string? custEmail { get; set; }
+        public double? balance { get; set; }
         public int BankId { get; set; }
         public int isDeleted { get; set; }
     }
